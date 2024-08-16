@@ -1,31 +1,60 @@
-import axios from "axios";
-import cheerio from "cheerio";
+import puppeteer from "puppeteer";
 
-export default async function handler(req, res) {
-  if (req.method === "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
-
-  const { url } = req.query;
-
-  if (!url) {
-    return res.status(400).json({ error: "URL parameter is required" });
-  }
-
+export async function GET(req) {
   try {
-    const { data } = await axios.get(url);
-    const $ = cheerio.load(data);
+    const browser = await puppeteer.launch({ headless: true });
+    const page = await browser.newPage();
 
-    // Contoh: mengambil semua judul artikel (ubah selektor sesuai kebutuhan)
-    const titles = [];
-    $("article h2").each((index, element) => {
-      titles.push($(element).text());
+    await page.goto(
+      "https://prestasi.unikom.ac.id/profil/mahasiswa/1f7Si6BSYELq4ckh5BTgpv05HyqBBDPC"
+    );
+
+    const prestasi = await page.evaluate(() => {
+      const prestasiElements = document.querySelectorAll(".media-body");
+      const prestasiArray = [];
+
+      prestasiElements.forEach((prestasiElement) => {
+        const namaKompetisi =
+          prestasiElement.querySelector("h4")?.innerText || "";
+        const jenisPrestasi =
+          prestasiElement.querySelector("h5")?.innerText || "";
+        const linkPrestasi = prestasiElement.querySelector("a")?.href || "";
+
+        // Extract badge data
+        const badges = Array.from(
+          prestasiElement.querySelectorAll(".badge a")
+        ).map((badge) => ({
+          kategori: badge.innerText,
+          kategoriLink: badge.href,
+        }));
+
+        prestasiArray.push({
+          namaKompetisi,
+          jenisPrestasi,
+          linkPrestasi,
+          badges,
+        });
+      });
+
+      return prestasiArray;
     });
 
-    res.status(200).json({ titles });
+    await browser.close();
+
+    return new Response(JSON.stringify(prestasi), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (error) {
-    res
-      .status(500)
-      .json({ error: "Error scraping website", details: error.message });
+    console.error(error);
+    return new Response(
+      JSON.stringify({
+        error: "Something went wrong while scraping the website.",
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   }
 }

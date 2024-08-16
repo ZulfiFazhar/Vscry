@@ -1,48 +1,46 @@
-// pages/index.js
 "use client";
-import { useEffect, useState } from "react";
-import axios from "axios";
 
-export default function Home() {
-  const [achievements, setAchievements] = useState([]);
-  const [loading, setLoading] = useState(true);
+import React, { useState, useEffect } from "react";
+import LoadingSkeleton from "@/components/blog/LoadingSkeleton";
+import PrestasiCard from "@/components/prestasi/PrestasiCard";
+
+export default function Page() {
   const [error, setError] = useState(null);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [prestasi, setPrestasi] = useState([]);
 
   useEffect(() => {
-    const fetchAchievements = async () => {
+    const fetchData = async () => {
       try {
-        const response = await axios.get("/api/prestasi");
-        setAchievements(response.data);
+        const response = await fetch("/api/prestasi");
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        setIsLoaded(true);
+        setPrestasi(data);
       } catch (error) {
-        setError(error.message);
-      } finally {
-        setLoading(false);
+        setIsLoaded(true);
+        setError(error);
       }
     };
 
-    fetchAchievements();
+    fetchData();
   }, []);
 
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
-
-  return (
-    <div className="flex flex-wrap gap-4">
-      {achievements.length > 0 ? (
-        achievements.map((item, index) => (
-          <div key={index} className="card">
-            <a href={item.link} target="_blank" rel="noopener noreferrer">
-              <img src={item.imgSrc} alt={item.title} width="80" />
-              <h4>{item.title}</h4>
-              <p>
-                {item.category} - {item.year}
-              </p>
-            </a>
-          </div>
-        ))
-      ) : (
-        <div>No achievements found</div>
-      )}
-    </div>
-  );
+  if (error) {
+    return <div>Error: {error.message}</div>;
+  } else if (!isLoaded) {
+    return <LoadingSkeleton />;
+  } else {
+    return (
+      <div className="w-full min-h-screen flex justify-center">
+        <div className="w-4/5 p-2 md:p-10 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 sm:gap-4">
+          {prestasi.map((item) => (
+            <PrestasiCard item={item} key={item.namaKompetisi} />
+          ))}
+        </div>
+      </div>
+    );
+  }
 }
