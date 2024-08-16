@@ -1,7 +1,5 @@
 "use client";
 
-import { Slash } from "@/components/home/Slash";
-
 export default function Page() {
   return (
     <div className="w-full min-h-screen flex justify-center">
